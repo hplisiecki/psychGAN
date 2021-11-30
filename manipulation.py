@@ -1,0 +1,3 @@
+# manipulacja wektorem
+
+#

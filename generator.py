@@ -13,43 +13,46 @@ from pretrained_networks import load_networks
 from zipfile import ZipFile
 import os
 
+
 class generator():
-    def __init__(self, network_pkl, direction_name,coefficient,truncation,n_levels,n_photos,type_of_preview,result_dir,generator_number=1):
+    def __init__(self, network_pkl, direction_name, coefficient, truncation, n_levels, n_photos, type_of_preview,
+                 result_dir, generator_number=1):
         self.no_generator = generator_number
-        self.coefficient = coefficient          # Siła manipluacji / przemnożenie wektora
-        self._truncation = truncation            # Parametr stylegan "jak różnorodne twarze"
-        self.n_levels = n_levels                # liczba poziomów manipulacji 1-3
-        self.n_photos = n_photos                # Ile zdjęć wygenerować
+        self.coefficient = coefficient  # Siła manipluacji / przemnożenie wektora
+        self._truncation = truncation  # Parametr stylegan "jak różnorodne twarze"
+        self.n_levels = n_levels  # liczba poziomów manipulacji 1-3
+        self.n_photos = n_photos  # Ile zdjęć wygenerować
         if type(network_pkl) is str:
             self._G, self._D, self.Gs = load_networks(network_pkl)
         else:
             self.Gs = network_pkl
-        self.preview_face = self.__create_coordinates(1)       # Array z koordynatami twarzy na podglądzie 1
-        self.preview_3faces = self.__create_coordinates(3)      # Array z koordynatami twarzy na podglądzie 3
-        self.synthesis_kwargs = {}              # Keyword arguments które przyjmuje stylegan
+        self.preview_face = self.__create_coordinates(1)  # Array z koordynatami twarzy na podglądzie 1
+        self.preview_3faces = self.__create_coordinates(3)  # Array z koordynatami twarzy na podglądzie 3
+        self.synthesis_kwargs = {}  # Keyword arguments które przyjmuje stylegan
         self.type_of_preview = type_of_preview  # Typ podglądu, wartości: "3_faces", "manipulation" w zależności od tego które ustawienia są zmieniane
-        self.dir = {"results":          Path(result_dir+str(self.no_generator)),
-                    "images":           Path(result_dir+str(self.no_generator)) / 'images',
-                    "thumbnails":       Path(result_dir+str(self.no_generator)) / 'thumbnails',
-                    "coordinates":      Path(result_dir+str(self.no_generator)) / 'coordinates',
-                    "dominance":        Path("stylegan2/stylegan2directions/dominance.npy"),
-                    "trustworthiness":  Path("stylegan2/stylegan2directions/trustworthiness.npy")}
-        self.__direction_name = direction_name.lower()            # Wybrany wymiar
+        self.dir = {"results": Path(result_dir + str(self.no_generator)),
+                    "images": Path(result_dir + str(self.no_generator)) / 'images',
+                    "thumbnails": Path(result_dir + str(self.no_generator)) / 'thumbnails',
+                    "coordinates": Path(result_dir + str(self.no_generator)) / 'coordinates',
+                    "dominance": Path("stylegan2/stylegan2directions/dominance.npy"),
+                    "trustworthiness": Path("stylegan2/stylegan2directions/trustworthiness.npy")}
+        self.__direction_name = direction_name.lower()  # Wybrany wymiar
         try:
-          self.direction = np.load(self.dir[self.__direction_name])    # Wgrany wektor cechy
+            self.direction = np.load(self.dir[self.__direction_name])  # Wgrany wektor cechy
         except:
-          self.direction = np.load(direction_name)
+            self.direction = np.load(direction_name)
 
         for directory in self.dir.values():
             if directory.suffix == "": directory.mkdir(exist_ok=True, parents=True)
 
-
     @property
-    def truncation(self): return self._truncation
+    def truncation(self):
+        return self._truncation
+
     @truncation.setter
     def truncation(self, truncation):
         w_avg = self.Gs.get_var('dlatent_avg')
-        f =  (self.preview_face - w_avg) / self.truncation
+        f = (self.preview_face - w_avg) / self.truncation
         self.preview_face = w_avg + (f) * truncation
         f = (self.preview_3faces - w_avg) / self.truncation
         self.preview_3faces = w_avg + (f) * truncation
@@ -58,16 +61,17 @@ class generator():
     # w_avg + (faces_w - w_avg) * self.truncation
 
     @property
-    def direction_name(self): return self.__direction_name
+    def direction_name(self):
+        return self.__direction_name
+
     @direction_name.setter
     def direction_name(self, direction_name):
-        try:            # Wybrany wymiar
-          self.direction = np.load(self.dir[self.__direction_name])    # Wgrany wektor cechy
-          self.__direction_name = direction_name.split("/")[-1].replace(".npy",'')
+        try:  # Wybrany wymiar
+            self.direction = np.load(self.dir[self.__direction_name])  # Wgrany wektor cechy
+            self.__direction_name = direction_name.split("/")[-1].replace(".npy", '')
         except:
-          self.direction = np.load(direction_name)
-          self.__direction_name = direction_name.split("/")[-1].replace(".npy",'')
-
+            self.direction = np.load(direction_name)
+            self.__direction_name = direction_name.split("/")[-1].replace(".npy", '')
 
     def refresh_preview(self):
         """Przełączniki co wywołać w zależności od wartości type_of_preview"""
@@ -81,23 +85,20 @@ class generator():
         all_w = self.__map_vectors(all_z)
         return self.__truncate_vectors(all_w)
 
-
     def change_face(self):
         if self.type_of_preview == "manipulation":
             self.preview_face = self.__create_coordinates(1)
         else:
             self.preview_3faces = self.__create_coordinates(3)
 
-    def __save_image(self, face, face_no, condition):   #Dodać kilka folderów wynikowych
-        image_pil = PIL.Image.fromarray(face,  'RGB')
+    def __save_image(self, face, face_no, condition):  # Dodać kilka folderów wynikowych
+        image_pil = PIL.Image.fromarray(face, 'RGB')
         image_pil.save(
-        self.dir["images"] / '{}{}cond{}.png'.format(face_no, self.direction_name,condition))
+            self.dir["images"] / '{}{}cond{}.png'.format(face_no, self.direction_name, condition))
 
-        image_pil.thumbnail((256,256))
+        image_pil.thumbnail((256, 256))
         image_pil.save(
-        self.dir["thumbnails"] / '{}{}cond{}.jpg'.format(face_no, self.direction_name,condition),format='JPEG')
-
-
+            self.dir["thumbnails"] / '{}{}cond{}.jpg'.format(face_no, self.direction_name, condition), format='JPEG')
 
     def generate(self):
         """Zapisuje wyniki"""
@@ -105,9 +106,10 @@ class generator():
 
         self.__set_synthesis_kwargs(minibatch_size)
 
-        coeffs = [i/self.n_levels*self.coefficient if self.n_levels> 0 else i for i in range(-self.n_levels, self.n_levels+1)]
+        coeffs = [i / self.n_levels * self.coefficient if self.n_levels > 0 else i for i in
+                  range(-self.n_levels, self.n_levels + 1)]
 
-        for i in range(self.n_photos // minibatch_size +1): # dodajmy ładowanie w interfejsie
+        for i in range(self.n_photos // minibatch_size + 1):  # dodajmy ładowanie w interfejsie
             all_w = self.__create_coordinates(minibatch_size)
 
             for k, coeff in enumerate(coeffs):
@@ -119,8 +121,8 @@ class generator():
                 manip_images = self.Gs.components.synthesis.run(manip_w, **self.synthesis_kwargs)
 
                 for j in range(len(all_w)):
-                    if i*minibatch_size + j < self.n_photos:
-                        self.__save_image(manip_images[j],i*minibatch_size+j, k)
+                    if i * minibatch_size + j < self.n_photos:
+                        self.__save_image(manip_images[j], i * minibatch_size + j, k)
 
             for j, (dlatent) in enumerate(all_w):
                 np.save(self.dir["coordinates"] / (str(i * minibatch_size + j) + '.npy'), dlatent[0])
@@ -136,7 +138,7 @@ class generator():
         self.__set_synthesis_kwargs(minibatch_size=3)
         all_w = self.preview_face.copy()
 
-        all_w = np.array([all_w[0],all_w[0],all_w[0]])  # Przygotowujemy miejsca na twarze zmanipulowane
+        all_w = np.array([all_w[0], all_w[0], all_w[0]])  # Przygotowujemy miejsca na twarze zmanipulowane
 
         # Przesunięcie twarzy o wektor (już rozwinięty w 18)
         all_w[0][0:8] = (all_w[0] - self.coefficient * self.direction)[0:8]
@@ -163,19 +165,19 @@ class generator():
         """__generate_preview_face_manip tylko że używa zmiennej preview_3faces zamist preview_face"""
 
     def __map_vectors(self, faces_z):
-         """Przyjmuje array wektorów z koordynatami twarzy w Z-space, gdzie losowane są wektory,
-         zwraca array przerzucony do w-space, gdzie dzieje się manipulacja"""
-         return self.Gs.components.mapping.run(faces_z, None)
+        """Przyjmuje array wektorów z koordynatami twarzy w Z-space, gdzie losowane są wektory,
+        zwraca array przerzucony do w-space, gdzie dzieje się manipulacja"""
+        return self.Gs.components.mapping.run(faces_z, None)
 
     def __truncate_vectors(self, faces_w):
         """Zwraca wektory z faces_w przesunięte w kierunku uśrednionej twarzy"""
         w_avg = self.Gs.get_var('dlatent_avg')
         return w_avg + (faces_w - w_avg) * self.truncation
 
-    def __set_synthesis_kwargs(self,minibatch_size = 3):
+    def __set_synthesis_kwargs(self, minibatch_size=3):
         """Za pierwszym razem tworzy keyword arguments do gnereowania,
         następnie może być użyta do zienienia minibatch_size"""
-        if len(self.synthesis_kwargs)==0:
+        if len(self.synthesis_kwargs) == 0:
             Gs_syn_kwargs = dnnlib.EasyDict()
             Gs_syn_kwargs.output_transform = dict(func=tflib.convert_images_to_uint8,
                                                   nchw_to_nhwc=True)
