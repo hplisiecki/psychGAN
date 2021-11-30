@@ -14,7 +14,7 @@ from zipfile import ZipFile
 import os
 
 
-class generator():
+class Generator():
     def __init__(self, network_pkl, direction_name, coefficient, truncation, n_levels, n_photos, type_of_preview,
                  result_dir, generator_number=1):
         self.no_generator = generator_number
@@ -185,3 +185,19 @@ class generator():
             self.synthesis_kwargs = Gs_syn_kwargs
 
         self.synthesis_kwargs.minibatch_size = minibatch_size
+
+
+class Generator2(Generator):
+    """Generator który działa ze styleGANem2, ale bez części graficznych"""
+    def __init__(self):
+        pass
+
+class GeneratorGraficzny(Generator):
+    """Działa tak jak to wyżej, czyli nie usuwamy żadnego kodu tylko przeklejamy nieważne metody tutaj"""
+    def __init__(self):
+        pass
+
+class Generator3(Generator):
+    """Dzaiła ze stylGANem3"""
+    def __init__(self):
+        pass
