@@ -7,7 +7,6 @@ import PIL.Image
 from PIL import Image, ImageDraw
 import imageio
 import matplotlib.pyplot as plt
-from generator import generator
 def main():
     # main_generator = generator(network_pkl="gdrive:networks/stylegan2-ffhq-config-f.pkl",
     #                            direction_name="Dominance", coefficient=1.5,
