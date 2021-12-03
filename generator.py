@@ -200,4 +200,15 @@ class GeneratorGraficzny(Generator):
 class Generator3(Generator):
     """Dzaiła ze stylGANem3"""
     def __init__(self):
-        pass
+        self.device = torch.device('cuda:0')
+        with open(network_pkl, 'rb') as fp:
+            G = pickle.load(fp)['G_ema'].to(self.device)
+        
+    def generate(self, z_dim):
+        zs = torch.randn([10000, G.mapping.z_dim], device=self.device)
+        w_stds = G.mapping(zs, None).std(0)
+        q = (G.mapping(torch.randn([10,G.mapping.z_dim], device=self.device), None, truncation_psi=0.7) - G.mapping.w_avg) / w_stds
+        
+        images = G.synthesis(q * w_stds + G.mapping.w_avg)
+        
+        return images
